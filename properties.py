@@ -110,32 +110,42 @@ class sa_func():
 
 class chemprop_model():
     
-    def __init__(self, checkpoint_dir):
-        self.checkpoints = []
+    def __init__(self, checkpoint_dir, features_generator=None):
+        self.features_generator = features_generator
+        self.checkpoints, self.scalers, self.features_scalers = [], [], []
         for root, _, files in os.walk(checkpoint_dir):
             for fname in files:
                 if fname.endswith('.pt'):
                     fname = os.path.join(root, fname)
-                    self.scaler, self.features_scaler, _, _ = load_scalers(fname)
-                    self.train_args = load_args(fname)
+
+                    scaler, features_scaler, _, _ = load_scalers(fname)
+                    self.scalers.append(scaler)
+                    self.features_scalers.append(features_scaler)
+
                     model = load_checkpoint(fname, device=torch.device('cuda', 0))
                     self.checkpoints.append(model)
 
     def __call__(self, smiles, batch_size=500):
-        test_data = get_data_from_smiles(smiles=[[s] for s in smiles], skip_invalid_smiles=False)
+        test_data = get_data_from_smiles(
+            smiles=[[s] for s in smiles],
+            skip_invalid_smiles=False,
+            feature_generator=self.features_generator
+        )
         valid_indices = [i for i in range(len(test_data)) if test_data[i].mol[0] is not None]
         full_data = test_data
         test_data = MoleculeDataset([test_data[i] for i in valid_indices])
-
-        if self.train_args.features_scaling:
-            test_data.normalize_features(self.features_scaler)
+        test_data_loader = MoleculeDataLoader(dataset=test_data, batch_size=batch_size)
 
         sum_preds = np.zeros((len(test_data), 1))
-        for model in self.checkpoints:
+        for model, scaler, features_scaler in zip(self.checkpoints, self.scalers, self.features_scalers):
+            test_data.reset_features_and_targets()
+            if features_scaler is not None:
+                test_data.normalize_features(features_scaler)
+
             model_preds = predict(
                 model=model,
-                data_loader=MoleculeDataLoader(dataset=test_data, batch_size=batch_size),
-                scaler=self.scaler
+                data_loader=test_data_loader,
+                scaler=scaler
             )
             sum_preds += np.array(model_preds)
 
@@ -151,7 +161,7 @@ class chemprop_model():
         return np.array(full_preds, dtype=np.float32)
 
 
-def get_scoring_function(prop_name):
+def get_scoring_function(prop_name, features_generator=None):
     """Function that initializes and returns a scoring function by name"""
     if prop_name == 'jnk3':
         return jnk3_model()
@@ -162,7 +172,7 @@ def get_scoring_function(prop_name):
     elif prop_name == 'sa':
         return sa_func()
     else:
-        return chemprop_model(prop_name)
+        return chemprop_model(prop_name, features_generator)
 
 if __name__ == "__main__":
     import sys
@@ -170,9 +180,10 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('--prop', required=True)
+    parser.add_argument('--features_generator', default=None, nargs='*')
 
     args = parser.parse_args()
-    funcs = [get_scoring_function(prop) for prop in args.prop.split(',')]
+    funcs = [get_scoring_function(prop, args.features_generator) for prop in args.prop.split(',')]
 
     data = [line.split()[:2] for line in sys.stdin]
     all_x, all_y = zip(*data)

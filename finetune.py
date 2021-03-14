@@ -61,6 +61,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--rationale', required=True)
     parser.add_argument('--prop', required=True)
+    parser.add_argument('--features_generator', default=None, nargs='*')
     parser.add_argument('--save_dir', required=True)
     parser.add_argument('--init_model', type=str)
     parser.add_argument('--load_epoch', type=int, default=-1)
@@ -93,7 +94,7 @@ if __name__ == "__main__":
     else:
         args.compare_func = normal_func
 
-    prop_funcs = [get_scoring_function(prop) for prop in args.prop.split(',')]
+    prop_funcs = [get_scoring_function(prop, args.features_generator) for prop in args.prop.split(',')]
     scoring_function = lambda x : list( zip(*[func(x) for func in prop_funcs]) )
 
     with open(args.rationale) as f:

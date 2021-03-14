@@ -88,6 +88,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', required=True)
     parser.add_argument('--prop', required=True)
+    parser.add_argument('--features_generator', default=None, nargs='*')
     parser.add_argument('--rollout', type=int, default=20)
     parser.add_argument('--c_puct', type=float, default=10)
     parser.add_argument('--max_atoms', type=int, default=20)
@@ -97,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument('--ncpu', type=int, default=15)
     args = parser.parse_args()
 
-    scoring_function = get_scoring_function(args.prop)
+    scoring_function = get_scoring_function(args.prop, args.features_generator)
 
     if hasattr(scoring_function, 'clf') and hasattr(scoring_function.clf, 'n_jobs'):
         scoring_function.clf.n_jobs = 1
