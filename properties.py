@@ -129,7 +129,7 @@ class chemprop_model():
         test_data = get_data_from_smiles(
             smiles=[[s] for s in smiles],
             skip_invalid_smiles=False,
-            feature_generator=self.features_generator
+            features_generator=self.features_generator
         )
         valid_indices = [i for i in range(len(test_data)) if test_data[i].mol[0] is not None]
         full_data = test_data
