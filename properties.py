@@ -9,9 +9,10 @@ import rdkit.Chem.QED as QED
 import scripts.sascorer as sascorer
 import os
 import pickle
+import torch
 
 from chemprop.train import predict
-from chemprop.data import MoleculeDataset
+from chemprop.data import MoleculeDataset, MoleculeDataLoader
 from chemprop.data.utils import get_data, get_data_from_smiles
 from chemprop.utils import load_args, load_checkpoint, load_scalers
 
@@ -115,14 +116,14 @@ class chemprop_model():
             for fname in files:
                 if fname.endswith('.pt'):
                     fname = os.path.join(root, fname)
-                    self.scaler, self.features_scaler = load_scalers(fname)
+                    self.scaler, self.features_scaler, _, _ = load_scalers(fname)
                     self.train_args = load_args(fname)
-                    model = load_checkpoint(fname, cuda=True)
+                    model = load_checkpoint(fname, device=torch.device('cuda', 0))
                     self.checkpoints.append(model)
 
     def __call__(self, smiles, batch_size=500):
-        test_data = get_data_from_smiles(smiles=smiles, skip_invalid_smiles=False, args=self.train_args)
-        valid_indices = [i for i in range(len(test_data)) if test_data[i].mol is not None]
+        test_data = get_data_from_smiles(smiles=[[s] for s in smiles], skip_invalid_smiles=False)
+        valid_indices = [i for i in range(len(test_data)) if test_data[i].mol[0] is not None]
         full_data = test_data
         test_data = MoleculeDataset([test_data[i] for i in valid_indices])
 
@@ -133,8 +134,7 @@ class chemprop_model():
         for model in self.checkpoints:
             model_preds = predict(
                 model=model,
-                data=test_data,
-                batch_size=batch_size,
+                data_loader=MoleculeDataLoader(dataset=test_data, batch_size=batch_size),
                 scaler=self.scaler
             )
             sum_preds += np.array(model_preds)

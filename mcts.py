@@ -6,6 +6,7 @@ from functools import partial
 from multiprocessing import Pool
 from fuseprop import find_clusters, extract_subgraph
 from properties import get_scoring_function
+from tqdm import tqdm
 
 MIN_ATOMS = 15
 C_PUCT = 10
@@ -97,7 +98,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     scoring_function = get_scoring_function(args.prop)
-    scoring_function.clf.n_jobs = 1
+
+    if hasattr(scoring_function, 'clf') and hasattr(scoring_function.clf, 'n_jobs'):
+        scoring_function.clf.n_jobs = 1
 
     C_PUCT = args.c_puct
     MIN_ATOMS = args.min_atoms
@@ -111,14 +114,19 @@ if __name__ == "__main__":
                               max_atoms=args.max_atoms, 
                               prop_delta=args.prop_delta)
 
-    pool = Pool(args.ncpu)
-    results = pool.map(work_func, data)
+    if args.ncpu > 1:
+        pool = Pool(args.ncpu)
+        results = pool.imap(work_func, data)
+    else:
+        results = map(work_func, data)
 
     rset = set()
-    for orig_smiles, rationales in results:
+    for orig_smiles, rationales in tqdm(results, total=len(data)):
+        orig_smiles = orig_smiles.strip()
         rationales = sorted(rationales, key=lambda x:len(x.atoms))
         for x in rationales[:args.ncand]:
-            if x.smiles not in rset:
-                print(orig_smiles, x.smiles, len(x.atoms), x.P)
-                rset.add(x.smiles)
+            x_smiles = x.smiles.strip()
+            if x_smiles not in rset:
+                print(orig_smiles, x_smiles, len(x.atoms), x.P)
+                rset.add(x_smiles)
 
