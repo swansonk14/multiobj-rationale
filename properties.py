@@ -122,7 +122,7 @@ class chemprop_model():
                     self.scalers.append(scaler)
                     self.features_scalers.append(features_scaler)
 
-                    model = load_checkpoint(fname, device=torch.device('cuda', 0))
+                    model = load_checkpoint(fname, device=torch.device('cpu'))
                     self.checkpoints.append(model)
 
     def __call__(self, smiles, batch_size=500):
