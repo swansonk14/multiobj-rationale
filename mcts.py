@@ -87,6 +87,7 @@ def mcts(smiles, scoring_function, n_rollout, max_atoms, prop_delta):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--data', required=True)
+    parser.add_argument('--smiles_column', default=None)
     parser.add_argument('--prop', required=True)
     parser.add_argument('--features_generator', default=None, nargs='*')
     parser.add_argument('--rollout', type=int, default=20)
@@ -107,8 +108,9 @@ if __name__ == "__main__":
     MIN_ATOMS = args.min_atoms
 
     with open(args.data) as f:
-        next(f)
-        data = [line.split(',')[0] for line in f]
+        header = next(f)
+        smiles_index = header.index(args.smiles_column) if args.smiles_column is not None else 0
+        data = [line.split(',')[smiles_index] for line in f]
 
     work_func = partial(mcts, scoring_function=scoring_function, 
                               n_rollout=args.rollout, 
