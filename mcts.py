@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     with open(args.data) as f:
         header = next(f)
-        smiles_index = header.index(args.smiles_column) if args.smiles_column is not None else 0
+        smiles_index = header.split(',').index(args.smiles_column) if args.smiles_column is not None else 0
         data = [line.split(',')[smiles_index] for line in f]
 
     work_func = partial(mcts, scoring_function=scoring_function, 
