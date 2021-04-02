@@ -1,6 +1,7 @@
 import sys
 import argparse
 import math
+import pandas as pd
 from rdkit import Chem
 from functools import partial
 from multiprocessing import Pool
@@ -107,10 +108,9 @@ if __name__ == "__main__":
     C_PUCT = args.c_puct
     MIN_ATOMS = args.min_atoms
 
-    with open(args.data) as f:
-        header = next(f)
-        smiles_index = header.split(',').index(args.smiles_column) if args.smiles_column is not None else 0
-        data = [line.split(',')[smiles_index] for line in f]
+    dataset = pd.read_csv(args.data)
+    smiles_column = args.smiles_column if args.smiles_column is not None else data.columns[0]
+    data = list(dataset[smiles_column])
 
     work_func = partial(mcts, scoring_function=scoring_function, 
                               n_rollout=args.rollout, 
