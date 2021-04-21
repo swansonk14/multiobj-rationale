@@ -40,9 +40,12 @@ if type(model_ckpt) is tuple:
     model.load_state_dict(model_ckpt[1])
 else:
     print('loading pre-trained model', file=sys.stderr)
-    testdata = [line.split()[1] for line in open(args.rationale)] 
-    testdata = unique_rationales(testdata)
+    assert args.rationale is not None
     model.load_state_dict(model_ckpt)
+
+if args.rationale is not None:
+    testdata = [line.split()[1] for line in open(args.rationale)]
+    testdata = unique_rationales(testdata)
 
 print('total # rationales:', len(testdata), file=sys.stderr)
 model.eval()
