@@ -7,7 +7,7 @@ from functools import partial
 from multiprocessing import Pool
 from fuseprop import find_clusters, extract_subgraph
 from properties import get_scoring_function
-from tqdm import tqdm
+from tqdm import trange, tqdm
 
 MIN_ATOMS = 15
 C_PUCT = 10
@@ -78,7 +78,7 @@ def mcts(smiles, scoring_function, n_rollout, max_atoms, prop_delta):
     
     root = MCTSNode( smiles, set(range(mol.GetNumAtoms())) ) 
     state_map = {smiles : root}
-    for _ in range(n_rollout):
+    for _ in trange(n_rollout):
         mcts_rollout(root, state_map, smiles, clusters, atom_cls, nei_cls, scoring_function)
 
     rationales = [node for _,node in state_map.items() if len(node.atoms) <= max_atoms and node.P >= prop_delta]
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     MIN_ATOMS = args.min_atoms
 
     dataset = pd.read_csv(args.data)
-    smiles_column = args.smiles_column if args.smiles_column is not None else data.columns[0]
+    smiles_column = args.smiles_column if args.smiles_column is not None else dataset.columns[0]
     data = list(dataset[smiles_column])
 
     work_func = partial(mcts, scoring_function=scoring_function, 
