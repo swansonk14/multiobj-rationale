@@ -98,6 +98,8 @@ if __name__ == "__main__":
     parser.add_argument('--prop_delta', type=float, default=0.5)
     parser.add_argument('--ncand', type=int, default=2)
     parser.add_argument('--ncpu', type=int, default=15)
+    parser.add_argument('--sort_by_value', action='store_true', default=False,
+                        help='Sort rationales by predicted value rather than by number of atoms')
     args = parser.parse_args()
 
     scoring_function = get_scoring_function(args.prop, args.features_generator)
@@ -126,7 +128,12 @@ if __name__ == "__main__":
     rset = set()
     for orig_smiles, rationales in tqdm(results, total=len(data)):
         orig_smiles = orig_smiles.strip()
-        rationales = sorted(rationales, key=lambda x:len(x.atoms))
+
+        if args.sort_by_value:
+            rationales = sorted(rationales, key=lambda x:x.P, reverse=True)
+        else:
+            rationales = sorted(rationales, key=lambda x:len(x.atoms))
+
         for x in rationales[:args.ncand]:
             x_smiles = x.smiles.strip()
             if x_smiles not in rset:
